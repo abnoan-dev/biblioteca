@@ -47,8 +47,10 @@ typedef struct {
 void BookSystem_init(BookSystem *system);
 void BookSystem_add(BookSystem *system);
 void BookSystem_list(BookSystem *system);
-void BookSystem_save_to_file(BookSystem *system);
-void BookSystem_load_from_file(BookSystem *system);
+void BookSystem_save_to_file_txt(BookSystem *system);
+void BookSystem_load_from_file_txt(BookSystem *system);
+void BookSystem_edit(BookSystem *system);
+void BookSystem_delete(BookSystem *system);
 void BookSystem_sort(BookSystem *system);
 int BookSystem_binary_search(BookSystem *system, const char *title);
 

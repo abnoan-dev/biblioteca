@@ -106,7 +106,7 @@ void BookSystem_add(BookSystem *system) {
     system->books[system->book_count].on_sale = (on_sale == 1);
     system->book_count++;
     BookSystem_sort(system);
-    BookSystem_save_to_file(system);
+    BookSystem_save_to_file_txt(system);
     printf("Livro cadastrado com sucesso!\n");
 }
 
@@ -122,51 +122,136 @@ void BookSystem_list(BookSystem *system) {
     }
 }
 
-void BookSystem_save_to_file(BookSystem *system) {
-    FILE *file = fopen("livros.bin", "wb");
+// Função para editar um livro
+void BookSystem_edit(BookSystem *system) {
+    char title[TITLE_LENGTH];
+    printf("Digite o titulo do livro que deseja editar: ");
+    scanf(" %[^\n]", title);
+    
+    int index = BookSystem_binary_search(system, title);
+    if (index != -1) {
+        printf("Editando o livro: %s\n", system->books[index].title);
+        printf("Digite o novo titulo (ou deixe em branco para manter): ");
+        char new_title[TITLE_LENGTH];
+        scanf(" %[^\n]", new_title);
+        if (strlen(new_title) > 0) {
+            strcpy(system->books[index].title, new_title);
+        }
+
+        printf("Digite o novo autor (ou deixe em branco para manter): ");
+        char new_author[AUTHOR_LENGTH];
+        scanf(" %[^\n]", new_author);
+        if (strlen(new_author) > 0) {
+            strcpy(system->books[index].author, new_author);
+        }
+
+        printf("O livro esta em promocao? (1 para sim, 0 para nao, -1 para manter): ");
+        int on_sale;
+        scanf("%d", &on_sale);
+        if (on_sale == 1 || on_sale == 0) {
+            system->books[index].on_sale = (on_sale == 1);
+        }
+
+        BookSystem_sort(system);
+        BookSystem_save_to_file_txt(system);
+        printf("Livro editado com sucesso!\n");
+    } else {
+        printf("Livro nao encontrado.\n");
+    }
+}
+
+// Função para excluir um livro
+void BookSystem_delete(BookSystem *system) {
+    char title[TITLE_LENGTH];
+    printf("Digite o titulo do livro que deseja excluir: ");
+    scanf(" %[^\n]", title);
+    
+    int index = BookSystem_binary_search(system, title);
+    if (index != -1) {
+        for (int i = index; i < system->book_count - 1; i++) {
+            system->books[i] = system->books[i + 1];
+        }
+        system->book_count--;
+        system->books = realloc(system->books, system->book_count * sizeof(Book));
+        if (!system->books && system->book_count > 0) {
+            printf("Erro de alocação de memoria.\n");
+            exit(1);
+        }
+        BookSystem_save_to_file_txt(system);
+        printf("Livro excluido com sucesso!\n");
+    } else {
+        printf("Livro nao encontrado.\n");
+    }
+}
+
+// Salvando os dados em um arquivo .txt
+void BookSystem_save_to_file_txt(BookSystem *system) {
+    FILE *file = fopen("livros.txt", "w");
     if (file == NULL) {
         printf("Erro ao abrir arquivo de livros.\n");
         return;
     }
-    fwrite(&system->book_count, sizeof(int), 1, file);
-    fwrite(system->books, sizeof(Book), system->book_count, file);
+    for (int i = 0; i < system->book_count; i++) {
+        fprintf(file, "%s,%s,%d\n", system->books[i].title, system->books[i].author, system->books[i].on_sale);
+    }
     fclose(file);
 }
 
-void BookSystem_load_from_file(BookSystem *system) {
-    FILE *file = fopen("livros.bin", "rb");
+// Carregar os dados de um arquivo .txt
+void BookSystem_load_from_file_txt(BookSystem *system) {
+    FILE *file = fopen("livros.txt", "r");
     if (file == NULL) {
         printf("Nenhum arquivo de livros encontrado.\n");
         return;
     }
-    fread(&system->book_count, sizeof(int), 1, file);
-    system->books = malloc(system->book_count * sizeof(Book));
-    fread(system->books, sizeof(Book), system->book_count, file);
+    
+    char line[256];
+    while (fgets(line, sizeof(line), file)) {
+        system->books = realloc(system->books, (system->book_count + 1) * sizeof(Book));
+        if (!system->books) {
+            printf("Erro de alocação de memoria.\n");
+            exit(1);
+        }
+        
+        char *token = strtok(line, ",");
+        strcpy(system->books[system->book_count].title, token);
+        
+        token = strtok(NULL, ",");
+        strcpy(system->books[system->book_count].author, token);
+        
+        token = strtok(NULL, ",");
+        system->books[system->book_count].on_sale = atoi(token);
+        
+        system->book_count++;
+    }
     fclose(file);
 }
 
-int compare_books(const void *a, const void *b) {
-    Book *book_a = (Book *)a;
-    Book *book_b = (Book *)b;
-    return strcmp(book_a->title, book_b->title);
-}
-
+// Ordenação dos livros por título
 void BookSystem_sort(BookSystem *system) {
-    qsort(system->books, system->book_count, sizeof(Book), compare_books);
+    for (int i = 0; i < system->book_count - 1; i++) {
+        for (int j = i + 1; j < system->book_count; j++) {
+            if (strcmp(system->books[i].title, system->books[j].title) > 0) {
+                Book temp = system->books[i];
+                system->books[i] = system->books[j];
+                system->books[j] = temp;
+            }
+        }
+    }
 }
 
+// Busca binária por título
 int BookSystem_binary_search(BookSystem *system, const char *title) {
-    int left = 0, right = system->book_count - 1;
-    while (left <= right) {
-        int mid = left + (right - left) / 2;
+    int low = 0, high = system->book_count - 1;
+    while (low <= high) {
+        int mid = (low + high) / 2;
         int cmp = strcmp(system->books[mid].title, title);
         if (cmp == 0) {
             return mid;
-        }
-        if (cmp < 0) {
-            left = mid + 1;
+        } else if (cmp < 0) {
+            low = mid + 1;
         } else {
-            right = mid - 1;
+            high = mid - 1;
         }
     }
     return -1;
@@ -182,6 +267,7 @@ void CartSystem_add(CartSystem *system, BookSystem *book_system) {
     char title[TITLE_LENGTH];
     printf("Digite o titulo do livro que deseja adicionar ao carrinho: ");
     scanf(" %[^\n]", title);
+    
     int index = BookSystem_binary_search(book_system, title);
     if (index != -1) {
         system->items = realloc(system->items, (system->cart_count + 1) * sizeof(CartItem));
@@ -191,7 +277,7 @@ void CartSystem_add(CartSystem *system, BookSystem *book_system) {
         }
         system->items[system->cart_count].book = &book_system->books[index];
         system->cart_count++;
-        printf("Livro adicionado ao carrinho!\n");
+        printf("Livro adicionado ao carrinho com sucesso!\n");
     } else {
         printf("Livro nao encontrado.\n");
     }
@@ -199,15 +285,15 @@ void CartSystem_add(CartSystem *system, BookSystem *book_system) {
 
 void CartSystem_checkout(CartSystem *system) {
     if (system->cart_count == 0) {
-        printf("O carrinho esta vazio.\n");
+        printf("Carrinho vazio.\n");
     } else {
-        printf("Comprando os seguintes livros:\n");
+        printf("Livros no carrinho:\n");
         for (int i = 0; i < system->cart_count; i++) {
             printf("%s por %s\n", system->items[i].book->title, system->items[i].book->author);
         }
+        printf("Compra finalizada com sucesso!\n");
         free(system->items);
         system->items = NULL;
         system->cart_count = 0;
-        printf("Compra finalizada!\n");
     }
 }
