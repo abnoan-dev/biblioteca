@@ -9,27 +9,29 @@
 #define AUTHOR_LENGTH 50
 
 // Estrutura de usuário
-typedef struct {
+typedef struct User {
     char username[EMAIL_LENGTH];
     char password[PASSWORD_LENGTH];
+    struct User *next;
 } User;
 
 // Estrutura de livro
-typedef struct {
+typedef struct Book {
     char title[TITLE_LENGTH];
     char author[AUTHOR_LENGTH];
     bool on_sale;
+    struct Book *next;
 } Book;
 
 // Estrutura de item do carrinho
-typedef struct {
+typedef struct CartItem {
     Book *book;
+    struct CartItem *next;
 } CartItem;
 
 // TAD UserSystem
 typedef struct {
-    User *users;
-    int user_count;
+    User *head;
 } UserSystem;
 
 void UserSystem_init(UserSystem *system);
@@ -40,8 +42,7 @@ void UserSystem_load_from_file(UserSystem *system);
 
 // TAD BookSystem
 typedef struct {
-    Book *books;
-    int book_count;
+    Book *head;
 } BookSystem;
 
 void BookSystem_init(BookSystem *system);
@@ -51,13 +52,11 @@ void BookSystem_save_to_file_txt(BookSystem *system);
 void BookSystem_load_from_file_txt(BookSystem *system);
 void BookSystem_edit(BookSystem *system);
 void BookSystem_delete(BookSystem *system);
-void BookSystem_sort(BookSystem *system);
-int BookSystem_binary_search(BookSystem *system, const char *title);
+Book* BookSystem_find(BookSystem *system, const char *title);
 
 // TAD CartSystem
 typedef struct {
-    CartItem *items;
-    int cart_count;
+    CartItem *head;
 } CartSystem;
 
 void CartSystem_init(CartSystem *system);
